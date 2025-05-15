@@ -1,0 +1,30 @@
+# ===================
+# = Sensitive files =
+# ===================
+# These should never be commited and only shared carefully
+
+# SSH keys
+id_rsa*
+
+# Terraform/OpenTofu Inputs (toplevel module)
+# These are mainly access credentials and locations
+*.tfvars*
+
+# Terraform/OpenTofu Statefiles
+# These should be backed up somewhere safe
+# They might not contain sensitive information
+# Object Storage is decent (S3, Ceph, Azure Blob Storage)
+*.tfstate*
+
+# =================
+# = Dynamic Files =
+# =================
+# Files that gets generated or downloaded while working
+# Ignored to save time and space
+
+# Terraform/OpenTofu Local Cache
+.terraform
+
+# C# .NET Local Cache
+bin
+obj

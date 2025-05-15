@@ -1,0 +1,47 @@
+name: gitops-deployment
+
+services:
+  ingress:
+    image: "traefik:v3.4"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+    # These are the ports that can be used externally to reach services here
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - public
+
+  home:
+    # Specify source
+    build:
+      context: ../services/home
+      dockerfile: Dockerfile
+    # Labels are used by other programs to make decisions 
+    labels:
+      # Define how this service is reachable from the outside
+      # Expose this service
+      - "traefik.enable=true"
+      # On the domain specified in the ".env" file or through Environment Variables
+      - "traefik.http.routers.home.rule=Host(`${DOMAIN}`)"
+      # Using the external port 80 (named web)
+      - "traefik.http.routers.home.entrypoints=web"
+      # Using the container's internal port 80
+      - "traefik.http.services.home.loadbalancer.server.port=80"
+    # If it crashes, restart
+    restart: always
+    deploy:
+      # Specify rollout tactic
+      update_config:
+        order: start-first
+
+networks:
+  public:

@@ -1,0 +1,61 @@
+#cloud-config
+# Setup a specific user
+users:
+  - name: gitops
+    groups:
+      - sudo
+      - docker # Add gitops user to docker group to allow running docker commands
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+
+# Setup required packages
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - curl
+  - cron
+
+write_files:
+  # Create synchronization script
+  - owner: root:root
+    permissions: "0755"
+    path: /usr/local/bin/sync-script
+    content: |
+      #!/bin/bash
+      # Move to App directory
+      cd "${app_path}"
+
+      # Overwrite the local with the remote's content
+      git fetch origin
+      git reset --hard origin/${git_branch}
+
+      # Ensure all changes are triggering a correct update
+      docker compose --file ${manifest_path} pull
+      docker compose --file ${manifest_path} up \
+        --build \
+        --no-deps \
+        --remove-orphans \
+        --detach
+
+# Run this set of commands at initialization
+runcmd:
+  # Install Docker
+  - curl -fsSL https://get.docker.com | sh
+  # Create application directory
+  - mkdir -p ${app_path}
+  # Clone repository
+  - git clone ${git_repo} --branch ${git_branch} ${app_path}
+  # Change ownership of the app directory to gitops user
+  - chown -R gitops:gitops ${app_path}
+  # Manually trigger the initial sync
+  - /usr/local/bin/sync-script
+  # Manually trigger the initial sync using the gitops user
+  - sudo -u gitops /usr/local/bin/sync-script
+  # Setup cron job
+  - |
+    crontab <<EOF
+    */1 * * * * gitops /usr/local/bin/sync-script
+    EOF
+
+final_message: "GitOps server initialized."

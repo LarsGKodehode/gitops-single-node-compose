@@ -1,0 +1,6 @@
+# This file contains overrides that are specific to the local
+# development environment. Try to keep it minimal.
+
+networks:
+  # Use compose manged network for local development
+  public:
